@@ -1,54 +1,69 @@
 import React, { useState } from "react";
 
 const Transcriber = () => {
+    const [transcription, setTranscription] = useState("");
     const [isTranscribing, setIsTranscribing] = useState<boolean>(false);
     const [isPaused, setIsPaused] = useState<boolean>(false);
 
-    const handleResumeTranscription = () => {
+    const handleStartTranscribing = () => {
+        setIsTranscribing(true);
+        setTranscription("Started transcribing...");
+    };
+
+    const handleResumeTranscribing = () => {
         setIsTranscribing(true);
         setIsPaused(false);
+        setTranscription("Resumed transcribing...");
     };
 
-    const handlePauseTranscription = () => {
+    const handlePauseTranscribing = () => {
         setIsTranscribing(false);
         setIsPaused(true);
+        setTranscription("Paused transcribing...");
     };
 
-    const handleStopTranscription = () => {
+    const handleStopTranscribing = () => {
         setIsTranscribing(false);
         setIsPaused(false);
+        setTranscription("Stopped transcribing...");
     };
 
     return (
-        <div className="w-full flex justify-between">
-            {!isTranscribing && !isPaused ? (
+        <div className="w-full">
+            {/* Transcription Text */}
+            <div className="w-full flex justify-center">{transcription}</div>
+
+            {/* Transcription Button Group */}
+            <div className="w-full flex justify-between">
+                {!isTranscribing && !isPaused ? (
+                    <button
+                        onClick={handleStartTranscribing}
+                        className="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-2 rounded-md"
+                    >
+                        Start
+                    </button>
+                ) : isPaused ? (
+                    <button
+                        onClick={handleResumeTranscribing}
+                        className="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-2 rounded-md"
+                    >
+                        Resume
+                    </button>
+                ) : (
+                    <button
+                        onClick={handlePauseTranscribing}
+                        className="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 px-2 rounded-md"
+                    >
+                        Pause
+                    </button>
+                )}
                 <button
-                    onClick={() => setIsTranscribing(true)}
-                    className="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-2 rounded-md"
+                    onClick={handleStopTranscribing}
+                    className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-2 rounded-md"
                 >
-                    Start
+                    Stop
                 </button>
-            ) : isPaused ? (
-                <button
-                    onClick={handleResumeTranscription}
-                    className="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-2 rounded-md"
-                >
-                    Resume
-                </button>
-            ) : (
-                <button
-                    onClick={handlePauseTranscription}
-                    className="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 px-2 rounded-md"
-                >
-                    Pause
-                </button>
-            )}
-            <button
-                onClick={handleStopTranscription}
-                className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-2 rounded-md"
-            >
-                Stop
-            </button>
+            </div>
         </div>
     );
 };
