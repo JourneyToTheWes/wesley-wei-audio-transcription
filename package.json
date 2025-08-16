@@ -6,7 +6,8 @@
     "scripts": {
         "dev": "vite",
         "build": "tsc && vite build",
-        "preview": "vite preview"
+        "preview": "vite preview",
+        "dev:live": "set \"NODE_ENV=development\" && vite build --watch"
     },
     "keywords": [],
     "author": "",
@@ -24,6 +25,7 @@
     "devDependencies": {
         "@types/chrome": "^0.1.4",
         "autoprefixer": "^10.4.21",
+        "hot-reload-extension-vite": "^1.0.13",
         "postcss": "^8.5.6",
         "tailwindcss": "^4.1.12"
     }

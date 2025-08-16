@@ -17,6 +17,6 @@
         "jsx": "react-jsx",
         "types": ["vite/client", "@types/chrome"]
     },
-    "include": ["src"],
+    "include": ["src", "src/background.ts"],
     "references": []
 }
