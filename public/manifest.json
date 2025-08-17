@@ -11,6 +11,9 @@
         "service_worker": "background.js",
         "type": "module"
     },
+    "side_panel": {
+        "default_path": "sidepanel.html"
+    },
     "permissions": ["tabCapture", "activeTab", "sidePanel", "storage"],
     "optional_permissions": ["microphone", "background"],
     "host_permissions": ["<all_urls>"]

@@ -8,6 +8,9 @@ const Transcriber = () => {
     const handleStartTranscribing = () => {
         setIsTranscribing(true);
         setTranscription("Started transcribing...");
+
+        // Start capture audio from tab
+        chrome.runtime.sendMessage({ action: "startTabAudioCapture" });
     };
 
     const handleResumeTranscribing = () => {
