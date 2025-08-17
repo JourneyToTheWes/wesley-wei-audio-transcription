@@ -1,9 +1,10 @@
 # Build output
-dist/
-build/
+client/dist/
+client/build/
 
 # Node modules
-node_modules/
+client/node_modules/
+server/node_modules/
 
 # Environment variables
 .env

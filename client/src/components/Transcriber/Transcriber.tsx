@@ -10,7 +10,14 @@ const Transcriber = () => {
         setTranscription("Started transcribing...");
 
         // Start capture audio from tab
-        chrome.runtime.sendMessage({ action: "startTabAudioCapture" });
+        chrome.tabCapture.capture({ audio: true, video: false }, (stream) => {
+            console.log("getting audio from tab");
+            if (stream) {
+                console.log("Tab audio stream started", stream);
+            } else {
+                console.error("Failed to capture tab audio");
+            }
+        });
     };
 
     const handleResumeTranscribing = () => {
