@@ -118,15 +118,27 @@ const Transcriber = () => {
     };
 
     const handleResumeTranscribing = () => {
-        setIsTranscribing(true);
-        setIsPaused(false);
-        setTranscription("Resumed transcribing...");
+        if (
+            mediaRecorderRef.current &&
+            mediaRecorderRef.current.state === "paused"
+        ) {
+            mediaRecorderRef.current.resume();
+            setIsTranscribing(true);
+            setIsPaused(false);
+            setTranscription((prev) => prev + "\nResumed transcribing...");
+        }
     };
 
     const handlePauseTranscribing = () => {
-        setIsTranscribing(false);
-        setIsPaused(true);
-        setTranscription("Paused transcribing...");
+        if (
+            mediaRecorderRef.current &&
+            mediaRecorderRef.current.state === "recording"
+        ) {
+            mediaRecorderRef.current.pause();
+            setIsTranscribing(false);
+            setIsPaused(true);
+            setTranscription((prev) => prev + "\nPaused transcribing...");
+        }
     };
 
     const handleStopTranscribing = () => {
