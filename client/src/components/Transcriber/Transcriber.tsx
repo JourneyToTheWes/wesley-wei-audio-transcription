@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 
 const Transcriber = () => {
     const [transcription, setTranscription] = useState("");
@@ -8,6 +8,25 @@ const Transcriber = () => {
     // useRef variables to store mutable objects for persistence across rerenders
     const socketRef = useRef<WebSocket | null>(null);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+    const startTimeRef = useRef(0);
+    const capturedStreamRef = useRef<MediaStream | null>(null);
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+
+    // Formats milliseconds into a timestamp (HH:mm:ss)
+    const formatTime = (ms: number) => {
+        const totalSeconds = Math.floor(ms / 1000);
+        const hours = Math.floor(totalSeconds / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+
+        const pad = (num: number) => String(num).padStart(2, "0");
+
+        if (hours > 0) {
+            return `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`;
+        } else {
+            return `${pad(minutes)}:${pad(seconds)}`;
+        }
+    };
 
     // Creates and returns new WebSocket to the transcribe service
     const connectWebSocket = () => {
@@ -22,17 +41,24 @@ const Transcriber = () => {
             try {
                 const data = JSON.parse(event.data);
                 if (data.transcript) {
+                    // Calculate the elapsed time since recording started
+                    const elapsedTime = Date.now() - startTimeRef.current;
+                    const timestamp = formatTime(elapsedTime);
+
                     // Check if it's a final transcript
                     if (data.isFinal) {
                         // Add a new line for a final transcription result
                         setTranscription(
-                            (prev) => prev + " " + data.transcript + "\n"
+                            (prev) =>
+                                prev + `[${timestamp}] ${data.transcript}\n`
                         );
                     } else {
                         // Updates last line with interim (non-final) results
                         setTranscription((prev) => {
                             const lines = prev.split("\n");
-                            lines[lines.length - 1] = data.transcript;
+                            lines[
+                                lines.length - 1
+                            ] = `[${timestamp}] ${data.transcript}`;
                             return lines.join("\n");
                         });
                     }
@@ -62,6 +88,7 @@ const Transcriber = () => {
         setTranscription(
             "Connecting to WebSocket and starting transcription..."
         );
+        startTimeRef.current = Date.now();
 
         // Start a WebSocket connection
         const socket = connectWebSocket();
@@ -79,6 +106,9 @@ const Transcriber = () => {
                 (stream) => {
                     if (stream) {
                         console.log("Tab audio stream started", stream);
+
+                        // Store the stream in a ref for later playback and cleanup
+                        capturedStreamRef.current = stream;
 
                         // Initialize MediaRecorder to record from the captured stream
                         const mediaRecorder = new MediaRecorder(stream, {
@@ -99,8 +129,8 @@ const Transcriber = () => {
                             }
                         };
 
-                        // Start recording, sending data in 2-second chunks
-                        mediaRecorder.start(2000);
+                        // Start recording, sending data in 0.5-second chunks
+                        mediaRecorder.start(500);
 
                         setTranscription("Recording and transcribing...");
                     } else {
@@ -123,6 +153,9 @@ const Transcriber = () => {
             mediaRecorderRef.current.state === "paused"
         ) {
             mediaRecorderRef.current.resume();
+            if (audioRef.current) {
+                audioRef.current.play();
+            }
             setIsTranscribing(true);
             setIsPaused(false);
             setTranscription((prev) => prev + "\nResumed transcribing...");
@@ -135,6 +168,9 @@ const Transcriber = () => {
             mediaRecorderRef.current.state === "recording"
         ) {
             mediaRecorderRef.current.pause();
+            if (audioRef.current) {
+                audioRef.current.pause();
+            }
             setIsTranscribing(false);
             setIsPaused(true);
             setTranscription((prev) => prev + "\nPaused transcribing...");
@@ -156,10 +192,43 @@ const Transcriber = () => {
             socketRef.current.close();
             console.log("WebSocket closed.");
         }
+        if (capturedStreamRef.current) {
+            capturedStreamRef.current
+                .getTracks()
+                .forEach((track) => track.stop());
+        }
         setIsTranscribing(false);
         setIsPaused(false);
         setTranscription((prev) => prev + "\nTranscription stopped.");
     };
+
+    // Effect to play back the captured audio stream
+    useEffect(() => {
+        if (capturedStreamRef.current) {
+            const audio = new Audio();
+            // Assign the captured stream as the audio source
+            audio.srcObject = capturedStreamRef.current;
+            // Start playing the audio
+            audio
+                .play()
+                .catch((e) => console.error("Error playing audio stream:", e));
+            audioRef.current = audio;
+        }
+
+        // Stop audio playback on component unmount
+        return () => {
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current.srcObject = null;
+            }
+        };
+    }, [capturedStreamRef.current]);
+
+    useEffect(() => {
+        return () => {
+            handleStopTranscribing();
+        };
+    }, []);
 
     return (
         <div className="w-full">
