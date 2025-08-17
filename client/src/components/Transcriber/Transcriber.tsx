@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
 
 const Transcriber = () => {
-    const [transcription, setTranscription] = useState("");
+    const [transcription, setTranscription] = useState<string>("");
     const [isTranscribing, setIsTranscribing] = useState<boolean>(false);
     const [isPaused, setIsPaused] = useState<boolean>(false);
+    const [sessionDuration, setSessionDuration] = useState<number>(0);
 
     // useRef variables to store mutable objects for persistence across rerenders
     const socketRef = useRef<WebSocket | null>(null);
@@ -27,6 +28,19 @@ const Transcriber = () => {
             return `${pad(minutes)}:${pad(seconds)}`;
         }
     };
+
+    useEffect(() => {
+        let sessionDurationInterval: undefined | number;
+        if (startTimeRef && startTimeRef.current) {
+            sessionDurationInterval = setInterval(() => {
+                setSessionDuration((prev) => prev + 1000);
+            }, 1000);
+        }
+
+        return () => {
+            clearInterval(sessionDurationInterval);
+        };
+    }, [startTimeRef.current]);
 
     // Creates and returns new WebSocket to the transcribe service
     const connectWebSocket = () => {
@@ -132,7 +146,7 @@ const Transcriber = () => {
                         // Start recording, sending data in 0.5-second chunks
                         mediaRecorder.start(500);
 
-                        setTranscription("Recording and transcribing...");
+                        setTranscription("Recording and transcribing...\n");
                     } else {
                         console.error("Failed to capture tab audio");
                         setTranscription("Error: Failed to capture tab audio.");
@@ -230,10 +244,22 @@ const Transcriber = () => {
         };
     }, []);
 
+    const renderTranscriptionWithBreaks = (text: string) => {
+        return text.split("\n").map((line, index) => (
+            <React.Fragment key={index}>
+                {line}
+                <br />
+            </React.Fragment>
+        ));
+    };
+
     return (
-        <div className="w-full">
+        <div className="w-full flex flex-col items-center gap-3">
             {/* Transcription Text */}
-            <div className="w-full flex justify-center">{transcription}</div>
+            <h2 className="text-base self-start">Transcription:</h2>
+            <div className="w-full min-h-[50px] bg-neutral-500 flex justify-center rounded-md shadow-md">
+                <p>{renderTranscriptionWithBreaks(transcription)}</p>
+            </div>
 
             {/* Transcription Button Group */}
             <div className="w-full flex justify-between">
@@ -265,6 +291,12 @@ const Transcriber = () => {
                 >
                     Stop
                 </button>
+            </div>
+
+            {/* Session Duration */}
+            <div className="flex flex-col items-center">
+                <h3 className="text-base">Session Duration</h3>
+                {formatTime(sessionDuration)}
             </div>
         </div>
     );
