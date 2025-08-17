@@ -11,9 +11,39 @@ const Transcriber = () => {
 
         // Start capture audio from tab
         chrome.tabCapture.capture({ audio: true, video: false }, (stream) => {
-            console.log("getting audio from tab");
             if (stream) {
                 console.log("Tab audio stream started", stream);
+
+                const mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: "audio/webm; codecs=opus",
+                });
+
+                mediaRecorder.ondataavailable = async (event) => {
+                    if (event.data.size > 0) {
+                        const formData = new FormData();
+                        formData.append("audio", event.data, "chunk.webm");
+
+                        try {
+                            console.log(formData.get("audio"));
+                            const response = await fetch(
+                                "http://localhost:5000/transcribe",
+                                {
+                                    method: "POST",
+                                    body: formData,
+                                }
+                            );
+                            const data = await response.json();
+                            console.log(data.transcript);
+                            setTranscription(
+                                (prev) => prev + "\n" + data.transcript
+                            );
+                        } catch (err) {
+                            console.error("Transcription error: ", err);
+                        }
+                    }
+                };
+
+                mediaRecorder.start(2000);
             } else {
                 console.error("Failed to capture tab audio");
             }

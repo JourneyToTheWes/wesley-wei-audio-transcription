@@ -9,3 +9,6 @@ server/node_modules/
 # Environment variables
 .env
 .env.*
+
+# Server
+server/uploads/
