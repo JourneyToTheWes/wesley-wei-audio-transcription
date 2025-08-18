@@ -5,6 +5,7 @@ const Transcriber = () => {
     const [isTranscribing, setIsTranscribing] = useState<boolean>(false);
     const [isPaused, setIsPaused] = useState<boolean>(false);
     const [sessionDuration, setSessionDuration] = useState<number>(0);
+    const [statusMessage, setStatusMessage] = useState("");
 
     // useRef variables to store mutable objects for persistence across rerenders
     const socketRef = useRef<WebSocket | null>(null);
@@ -256,12 +257,80 @@ const Transcriber = () => {
         ));
     };
 
+    const handleCopyToClipboard = async () => {
+        try {
+            await navigator.clipboard.writeText(transcription);
+            setStatusMessage("Transcript copied to clipboard!");
+            setTimeout(() => setStatusMessage(""), 3000);
+        } catch (err) {
+            console.error("Failed to copy transcript: ", err);
+            setStatusMessage("Failed to copy transcript.");
+        }
+    };
+
+    const handleDownloadTranscriptText = () => {
+        const element = document.createElement("a");
+        const file = new Blob([transcription], { type: "text/plain" });
+        element.href = URL.createObjectURL(file);
+        element.download = "transcription.txt";
+        document.body.appendChild(element);
+        element.click();
+        document.body.removeChild(element);
+        setStatusMessage("Transcription downloaded as text!");
+        setTimeout(() => setStatusMessage(""), 3000);
+    };
+
+    const handleDownloadTranscriptJson = () => {
+        const lines = transcription
+            .split("\n")
+            .filter((line) => line.trim() !== "");
+
+        // Parse the text into a structured JSON format
+        const jsonOutput = lines
+            .map((line) => {
+                // Regex to extract the timestamp and text
+                const match = line.match(/^\[(.*?)\]\s*(.*)$/);
+                if (match) {
+                    return {
+                        timestamp: match[1],
+                        text: match[2].trim(),
+                    };
+                }
+                return null;
+            })
+            .filter((item) => item !== null);
+
+        const jsonString = JSON.stringify(jsonOutput, null, 2);
+        const element = document.createElement("a");
+        const file = new Blob([jsonString], { type: "application/json" });
+        element.href = URL.createObjectURL(file);
+        element.download = "transcription.json";
+        document.body.appendChild(element);
+        element.click();
+        document.body.removeChild(element);
+        setStatusMessage("Transcription downloaded as JSON!");
+        setTimeout(() => setStatusMessage(""), 3000);
+    };
+
     return (
         <div className="w-full flex flex-col items-center gap-3">
+            {/* Status Message Toast */}
+            <div
+                className={`w-9/10 p-3 bg-gray-600 mb-4 fixed transition-all duration-500 ${
+                    statusMessage.length > 0
+                        ? "opacity-90 translate-y-0"
+                        : "opacity-0 -translate-y-full"
+                }`}
+            >
+                <p className="text-sm text-white">{statusMessage}</p>
+            </div>
+
             {/* Transcription Text */}
-            <h2 className="text-base self-start">Transcription:</h2>
-            <div className="w-full min-h-[50px] bg-neutral-500 flex justify-center rounded-md shadow-md">
-                <p>{renderTranscriptionWithBreaks(transcription)}</p>
+            <div className="w-full mt-8">
+                <h2 className="text-base self-start">Transcription:</h2>
+                <div className="w-full min-h-[50px] bg-neutral-500 flex justify-center rounded-md shadow-md">
+                    <p>{renderTranscriptionWithBreaks(transcription)}</p>
+                </div>
             </div>
 
             {/* Transcription Button Group */}
@@ -300,6 +369,43 @@ const Transcriber = () => {
             <div className="flex flex-col items-center">
                 <h3 className="text-base">Session Duration</h3>
                 {formatTime(sessionDuration)}
+            </div>
+
+            {/* Copy/Download Transcript */}
+            <div className="space-x-4 mb-4">
+                <button
+                    onClick={handleCopyToClipboard}
+                    disabled={transcription.length === 0}
+                    className={`px-4 py-2 rounded-md font-semibold text-white ${
+                        transcription.length === 0
+                            ? "bg-gray-400"
+                            : "bg-indigo-600 hover:bg-indigo-700"
+                    }`}
+                >
+                    Copy to Clipboard
+                </button>
+                <button
+                    onClick={handleDownloadTranscriptText}
+                    disabled={transcription.length === 0}
+                    className={`px-4 py-2 rounded-md font-semibold text-white ${
+                        transcription.length === 0
+                            ? "bg-gray-400"
+                            : "bg-purple-600 hover:bg-purple-700"
+                    }`}
+                >
+                    Download Text
+                </button>
+                <button
+                    onClick={handleDownloadTranscriptJson}
+                    disabled={transcription.length === 0}
+                    className={`px-4 py-2 rounded-md font-semibold text-white ${
+                        transcription.length === 0
+                            ? "bg-gray-400"
+                            : "bg-purple-600 hover:bg-purple-700"
+                    }`}
+                >
+                    Download JSON
+                </button>
             </div>
         </div>
     );
