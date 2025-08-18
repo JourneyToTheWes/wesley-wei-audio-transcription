@@ -1,11 +1,17 @@
 import React, { useState, useRef, useEffect } from "react";
+import Toast from "../Toast/Toast";
 
 const Transcriber = () => {
+    // Constants for retry logic
+    const MAX_RETRIES = 5;
+    const RETRY_BASE_DELAY = 1000; // 1 second
+
     const [transcription, setTranscription] = useState<string>("");
     const [isTranscribing, setIsTranscribing] = useState<boolean>(false);
     const [isPaused, setIsPaused] = useState<boolean>(false);
     const [sessionDuration, setSessionDuration] = useState<number>(0);
     const [statusMessage, setStatusMessage] = useState("");
+    const [showToast, setShowToast] = useState(false);
 
     // useRef variables to store mutable objects for persistence across rerenders
     const socketRef = useRef<WebSocket | null>(null);
@@ -14,6 +20,17 @@ const Transcriber = () => {
     const capturedStreamRef = useRef<MediaStream | null>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const sessionDurationIntervalRef = useRef<number | undefined>(undefined);
+    const retryCountRef = useRef(0);
+
+    const displayStatusMessage = (message: string) => {
+        setStatusMessage(message);
+        setShowToast(true);
+    };
+
+    const handleCloseToast = () => {
+        setStatusMessage("");
+        setShowToast(false);
+    };
 
     // Formats milliseconds into a timestamp (HH:mm:ss)
     const formatTime = (ms: number) => {
@@ -44,6 +61,34 @@ const Transcriber = () => {
             clearInterval(sessionDurationIntervalRef.current);
         };
     }, [isTranscribing, isPaused]);
+
+    // Reconnect WebSocket with exponential backoff
+    const reconnectWebSocket = () => {
+        if (retryCountRef.current < MAX_RETRIES) {
+            const delay = RETRY_BASE_DELAY * Math.pow(2, retryCountRef.current);
+            displayStatusMessage(
+                `Connection lost. Retrying in ${
+                    delay / 1000
+                } seconds... (Attempt ${
+                    retryCountRef.current + 1
+                }/${MAX_RETRIES})`
+            );
+            retryCountRef.current++;
+            setTimeout(() => {
+                if (!isTranscribing) {
+                    // If the user has stopped transcription manually, don't try to reconnect
+                    return;
+                }
+                connectWebSocket();
+            }, delay);
+        } else {
+            displayStatusMessage(
+                "Failed to reconnect. Please try starting a new transcription."
+            );
+            setIsTranscribing(false);
+            setIsPaused(false);
+        }
+    };
 
     // Creates and returns new WebSocket to the transcribe service
     const connectWebSocket = () => {
@@ -88,13 +133,19 @@ const Transcriber = () => {
         // Handle connection closure
         newSocket.onclose = () => {
             console.log("WebSocket connection closed.");
-            setIsTranscribing(false);
+
+            if (isTranscribing) {
+                reconnectWebSocket();
+            }
         };
 
         // Handle errors
         newSocket.onerror = (err) => {
             console.error("WebSocket error:", err);
-            setIsTranscribing(false);
+
+            if (isTranscribing) {
+                reconnectWebSocket();
+            }
         };
 
         return newSocket;
@@ -102,11 +153,9 @@ const Transcriber = () => {
 
     const handleStartTranscribing = () => {
         setSessionDuration(0); // Set session duration back to 0 when starting new session
-        setIsTranscribing(true);
         setTranscription(
             "Connecting to WebSocket and starting transcription..."
         );
-        startTimeRef.current = Date.now();
 
         // Start a WebSocket connection
         const socket = connectWebSocket();
@@ -114,9 +163,18 @@ const Transcriber = () => {
         // The 'onopen' event handler ensures the socket is ready before sending data
         socket.onopen = () => {
             console.log("WebSocket connection opened.");
+            displayStatusMessage("WebSocket connected.");
+            retryCountRef.current = 0; // Reset retry count on successful connection
+
+            if (isTranscribing) {
+                return;
+            }
+
+            setIsTranscribing(true);
             setTranscription(
                 "WebSocket connected. Starting tab audio capture..."
             );
+            startTimeRef.current = Date.now();
 
             // Start capture audio from tab using the chrome.tabCapture API
             chrome.tabCapture.capture(
@@ -158,6 +216,8 @@ const Transcriber = () => {
                         // Close the socket if capture fails
                         if (socket.readyState === WebSocket.OPEN) {
                             socket.close();
+
+                            displayStatusMessage("WebSocket closed.");
                         }
                     }
                 }
@@ -176,7 +236,7 @@ const Transcriber = () => {
             }
             setIsTranscribing(true);
             setIsPaused(false);
-            setTranscription((prev) => prev + "\nResumed transcribing...");
+            setTranscription((prev) => prev + "\nResumed transcribing...\n");
         }
     };
 
@@ -191,7 +251,7 @@ const Transcriber = () => {
             }
             setIsTranscribing(false);
             setIsPaused(true);
-            setTranscription((prev) => prev + "\nPaused transcribing...");
+            setTranscription((prev) => prev + "\nPaused transcribing...\n");
         }
     };
 
@@ -260,11 +320,10 @@ const Transcriber = () => {
     const handleCopyToClipboard = async () => {
         try {
             await navigator.clipboard.writeText(transcription);
-            setStatusMessage("Transcript copied to clipboard!");
-            setTimeout(() => setStatusMessage(""), 3000);
+            displayStatusMessage("Transcript copied to clipboard!");
         } catch (err) {
             console.error("Failed to copy transcript: ", err);
-            setStatusMessage("Failed to copy transcript.");
+            displayStatusMessage("Failed to copy transcript.");
         }
     };
 
@@ -276,8 +335,7 @@ const Transcriber = () => {
         document.body.appendChild(element);
         element.click();
         document.body.removeChild(element);
-        setStatusMessage("Transcription downloaded as text!");
-        setTimeout(() => setStatusMessage(""), 3000);
+        displayStatusMessage("Transcription downloaded as text!");
     };
 
     const handleDownloadTranscriptJson = () => {
@@ -308,22 +366,19 @@ const Transcriber = () => {
         document.body.appendChild(element);
         element.click();
         document.body.removeChild(element);
-        setStatusMessage("Transcription downloaded as JSON!");
-        setTimeout(() => setStatusMessage(""), 3000);
+        displayStatusMessage("Transcription downloaded as JSON!");
     };
 
     return (
         <div className="w-full flex flex-col items-center gap-3">
             {/* Status Message Toast */}
-            <div
-                className={`w-9/10 p-3 bg-gray-600 mb-4 fixed transition-all duration-500 ${
-                    statusMessage.length > 0
-                        ? "opacity-90 translate-y-0"
-                        : "opacity-0 -translate-y-full"
-                }`}
-            >
-                <p className="text-sm text-white">{statusMessage}</p>
-            </div>
+            {showToast && (
+                <Toast
+                    message={statusMessage}
+                    duration={3000}
+                    onClose={handleCloseToast}
+                />
+            )}
 
             {/* Transcription Text */}
             <div className="w-full mt-8">
@@ -359,7 +414,12 @@ const Transcriber = () => {
                 )}
                 <button
                     onClick={handleStopTranscribing}
-                    className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-2 rounded-md"
+                    disabled={!isTranscribing}
+                    className={`text-white font-semibold py-2 px-2 rounded-md ${
+                        isTranscribing
+                            ? "bg-red-500 hover:bg-red-600"
+                            : "bg-gray-400"
+                    }`}
                 >
                     Stop
                 </button>
