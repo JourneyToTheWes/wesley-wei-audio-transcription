@@ -26,13 +26,16 @@ wss.on("connection", (ws) => {
         languageCode: "en-US",
     };
     // Configure the Google Cloud streaming request.
-    const request: protos.google.cloud.speech.v1.IRecognizeRequest = {
-        config,
-    };
+    const streamingRecognitionConfig: protos.google.cloud.speech.v1.IStreamingRecognitionConfig =
+        {
+            config,
+            singleUtterance: false,
+            interimResults: true,
+        };
 
     // Create a bidirectional streaming call to the Google Cloud API.
     const recognizeStream = speechClient
-        .streamingRecognize(request)
+        .streamingRecognize(streamingRecognitionConfig)
         .on("error", (error) => {
             console.error("Google Speech API stream error:", error);
             ws.send(JSON.stringify({ error: error.message }));

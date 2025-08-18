@@ -3,7 +3,7 @@ import Toast from "../Toast/Toast";
 
 const Transcriber = () => {
     // Constants for retry logic
-    const MAX_RETRIES = 5;
+    const MAX_RETRIES = 3;
     const RETRY_BASE_DELAY = 1000; // 1 second
 
     const [transcription, setTranscription] = useState<string>("");
@@ -21,6 +21,10 @@ const Transcriber = () => {
     const audioRef = useRef<HTMLAudioElement | null>(null);
     const sessionDurationIntervalRef = useRef<number | undefined>(undefined);
     const retryCountRef = useRef(0);
+
+    // For managing the transcription state
+    const lastFinalTranscriptionRef = useRef("");
+    const lastInterimTranscriptionRef = useRef("");
 
     const displayStatusMessage = (message: string) => {
         setStatusMessage(message);
@@ -109,21 +113,19 @@ const Transcriber = () => {
 
                     // Check if it's a final transcript
                     if (data.isFinal) {
-                        // Add a new line for a final transcription result
-                        setTranscription(
-                            (prev) =>
-                                prev + `[${timestamp}] ${data.transcript}\n`
-                        );
+                        // If it's a final result, append it to the final text and clear the interim buffer
+                        lastFinalTranscriptionRef.current += `[${timestamp}] ${data.transcript}\n`;
+                        lastInterimTranscriptionRef.current = "";
                     } else {
-                        // Updates last line with interim (non-final) results
-                        setTranscription((prev) => {
-                            const lines = prev.split("\n");
-                            lines[
-                                lines.length - 1
-                            ] = `[${timestamp}] ${data.transcript}`;
-                            return lines.join("\n");
-                        });
+                        // If it's an interim result, store it in the interim buffer
+                        lastInterimTranscriptionRef.current = `[${timestamp}] ${data.transcript}`;
                     }
+
+                    // Update the main transcription state by combining final and interim text
+                    setTranscription(
+                        lastFinalTranscriptionRef.current +
+                            lastInterimTranscriptionRef.current
+                    );
                 }
             } catch (err) {
                 console.error("Failed to parse WebSocket message:", err);
@@ -205,8 +207,8 @@ const Transcriber = () => {
                             }
                         };
 
-                        // Start recording, sending data in 0.5-second chunks
-                        mediaRecorder.start(500);
+                        // Start recording, sending data in 0.1-second chunks
+                        mediaRecorder.start(100);
 
                         setTranscription("Recording and transcribing...\n");
                     } else {
@@ -344,19 +346,20 @@ const Transcriber = () => {
             .filter((line) => line.trim() !== "");
 
         // Parse the text into a structured JSON format
-        const jsonOutput = lines
-            .map((line) => {
-                // Regex to extract the timestamp and text
-                const match = line.match(/^\[(.*?)\]\s*(.*)$/);
-                if (match) {
-                    return {
-                        timestamp: match[1],
-                        text: match[2].trim(),
-                    };
-                }
-                return null;
-            })
-            .filter((item) => item !== null);
+        const jsonOutput = lines.map((line) => {
+            // Regex to extract the timestamp and text
+            const match = line.match(/^\[(.*?)\]\s*(.*)$/);
+            if (match) {
+                return {
+                    timestamp: match[1],
+                    text: match[2].trim(),
+                };
+            } else {
+                return {
+                    text: line,
+                };
+            }
+        });
 
         const jsonString = JSON.stringify(jsonOutput, null, 2);
         const element = document.createElement("a");
@@ -383,7 +386,7 @@ const Transcriber = () => {
             {/* Transcription Text */}
             <div className="w-full mt-8">
                 <h2 className="text-base self-start">Transcription:</h2>
-                <div className="w-full min-h-[50px] bg-neutral-500 flex justify-center rounded-md shadow-md">
+                <div className="w-full min-h-[50px] bg-neutral-500 flex justify-center rounded-md shadow-md p-3">
                     <p>{renderTranscriptionWithBreaks(transcription)}</p>
                 </div>
             </div>
@@ -414,9 +417,9 @@ const Transcriber = () => {
                 )}
                 <button
                     onClick={handleStopTranscribing}
-                    disabled={!isTranscribing}
+                    disabled={!isTranscribing && !isPaused}
                     className={`text-white font-semibold py-2 px-2 rounded-md ${
-                        isTranscribing
+                        isTranscribing || isPaused
                             ? "bg-red-500 hover:bg-red-600"
                             : "bg-gray-400"
                     }`}
