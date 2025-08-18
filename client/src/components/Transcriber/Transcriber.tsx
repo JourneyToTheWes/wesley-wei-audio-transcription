@@ -12,6 +12,7 @@ const Transcriber = () => {
     const startTimeRef = useRef(0);
     const capturedStreamRef = useRef<MediaStream | null>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
+    const sessionDurationIntervalRef = useRef<number | undefined>(undefined);
 
     // Formats milliseconds into a timestamp (HH:mm:ss)
     const formatTime = (ms: number) => {
@@ -30,17 +31,18 @@ const Transcriber = () => {
     };
 
     useEffect(() => {
-        let sessionDurationInterval: undefined | number;
-        if (startTimeRef && startTimeRef.current) {
-            sessionDurationInterval = setInterval(() => {
+        if (isTranscribing && !isPaused) {
+            sessionDurationIntervalRef.current = setInterval(() => {
                 setSessionDuration((prev) => prev + 1000);
             }, 1000);
+        } else {
+            clearInterval(sessionDurationIntervalRef.current);
         }
 
         return () => {
-            clearInterval(sessionDurationInterval);
+            clearInterval(sessionDurationIntervalRef.current);
         };
-    }, [startTimeRef.current]);
+    }, [isTranscribing, isPaused]);
 
     // Creates and returns new WebSocket to the transcribe service
     const connectWebSocket = () => {
@@ -98,6 +100,7 @@ const Transcriber = () => {
     };
 
     const handleStartTranscribing = () => {
+        setSessionDuration(0); // Set session duration back to 0 when starting new session
         setIsTranscribing(true);
         setTranscription(
             "Connecting to WebSocket and starting transcription..."
