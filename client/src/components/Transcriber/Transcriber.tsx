@@ -1,6 +1,11 @@
 import React, { useState, useRef, useEffect } from "react";
 import Toast from "../Toast/Toast";
 
+interface ITranscript {
+    timestamp: number;
+    text: string;
+}
+
 const Transcriber = () => {
     // Constants for retry logic
     const MAX_RETRIES = 3;
@@ -23,8 +28,9 @@ const Transcriber = () => {
     const retryCountRef = useRef(0);
 
     // For managing the transcription state
-    const lastFinalTranscriptionRef = useRef("");
-    const lastInterimTranscriptionRef = useRef("");
+    const finalTranscriptionEventsRef = useRef<ITranscript[]>([]);
+    const lastInterimTranscriptionRef = useRef<ITranscript | null>(null);
+    const userMessagesRef = useRef<ITranscript[]>([]);
 
     const displayStatusMessage = (message: string) => {
         setStatusMessage(message);
@@ -109,23 +115,26 @@ const Transcriber = () => {
                 if (data.transcript) {
                     // Calculate the elapsed time since recording started
                     const elapsedTime = Date.now() - startTimeRef.current;
-                    const timestamp = formatTime(elapsedTime);
+                    const timestamp = elapsedTime;
 
                     // Check if it's a final transcript
                     if (data.isFinal) {
                         // If it's a final result, append it to the final text and clear the interim buffer
-                        lastFinalTranscriptionRef.current += `[${timestamp}] ${data.transcript}\n`;
-                        lastInterimTranscriptionRef.current = "";
+                        finalTranscriptionEventsRef.current.push({
+                            timestamp,
+                            text: data.transcript,
+                        });
+                        lastInterimTranscriptionRef.current = null;
                     } else {
                         // If it's an interim result, store it in the interim buffer
-                        lastInterimTranscriptionRef.current = `[${timestamp}] ${data.transcript}`;
+                        lastInterimTranscriptionRef.current = {
+                            timestamp,
+                            text: data.transcript,
+                        };
                     }
 
-                    // Update the main transcription state by combining final and interim text
-                    setTranscription(
-                        lastFinalTranscriptionRef.current +
-                            lastInterimTranscriptionRef.current
-                    );
+                    // Update the main transcription state by combining all parts
+                    setTranscription(combineAndRenderTranscripts());
                 }
             } catch (err) {
                 console.error("Failed to parse WebSocket message:", err);
@@ -151,6 +160,35 @@ const Transcriber = () => {
         };
 
         return newSocket;
+    };
+
+    // Helper function to combine and render all transcription events in correct order
+    const combineAndRenderTranscripts = () => {
+        // Combine final transcripts and user messages
+        const allEvents = [
+            ...finalTranscriptionEventsRef.current,
+            ...userMessagesRef.current,
+        ];
+
+        // Sort all events by their timestamp
+        allEvents.sort(
+            (a: ITranscript, b: ITranscript) => a.timestamp - b.timestamp
+        );
+
+        // Build the full transcription string from the sorted events
+        let fullText = allEvents
+            .map((event) => `[${formatTime(event.timestamp)}] ${event.text}`)
+            .join("\n");
+
+        // Append the current interim result if it exists
+        if (lastInterimTranscriptionRef.current) {
+            const interimTimestamp =
+                lastInterimTranscriptionRef.current.timestamp;
+            const interimText = lastInterimTranscriptionRef.current.text;
+            fullText += `\n[${formatTime(interimTimestamp)}] ${interimText}`;
+        }
+
+        return fullText;
     };
 
     const handleStartTranscribing = () => {
@@ -238,7 +276,12 @@ const Transcriber = () => {
             }
             setIsTranscribing(true);
             setIsPaused(false);
-            setTranscription((prev) => prev + "\nResumed transcribing...\n");
+
+            userMessagesRef.current.push({
+                timestamp: Date.now() - startTimeRef.current,
+                text: "[Resumed transcribing...]",
+            });
+            setTranscription(combineAndRenderTranscripts());
         }
     };
 
@@ -253,7 +296,11 @@ const Transcriber = () => {
             }
             setIsTranscribing(false);
             setIsPaused(true);
-            setTranscription((prev) => prev + "\nPaused transcribing...\n");
+            userMessagesRef.current.push({
+                timestamp: Date.now() - startTimeRef.current,
+                text: "[Paused transcribing...]",
+            });
+            setTranscription(combineAndRenderTranscripts());
         }
     };
 
@@ -279,7 +326,12 @@ const Transcriber = () => {
         }
         setIsTranscribing(false);
         setIsPaused(false);
-        setTranscription((prev) => prev + "\nTranscription stopped.");
+        userMessagesRef.current.push({
+            timestamp: Date.now() - startTimeRef.current,
+            text: "Transcription stopped.",
+        });
+
+        setTranscription(combineAndRenderTranscripts());
     };
 
     // Effect to play back the captured audio stream
