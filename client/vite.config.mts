@@ -20,6 +20,7 @@ export default defineConfig({
                 sidepanel: "sidepanel.html",
                 background: "src/background.ts",
                 home: "home.html",
+                permissions: "permissions.html",
             },
             output: {
                 entryFileNames: (assetInfo) => {

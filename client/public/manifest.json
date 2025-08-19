@@ -16,7 +16,7 @@
     },
     "web_accessible_resources": [
         {
-            "resources": ["home.html"],
+            "resources": ["home.html", "permissions.html"],
             "matches": ["<all_urls>"]
         }
     ],

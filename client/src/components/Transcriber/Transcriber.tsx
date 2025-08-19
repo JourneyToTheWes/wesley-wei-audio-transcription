@@ -5,6 +5,7 @@ import { FaCopy, FaPause, FaPlay, FaStop } from "react-icons/fa";
 import { BsFiletypeTxt } from "react-icons/bs";
 import { LuFileJson2 } from "react-icons/lu";
 import { requestMicrophonePermission } from "../../utils/permissions";
+import { Permission } from "../../permissions/Permissions";
 
 interface ITranscript {
     timestamp: number;
@@ -308,6 +309,12 @@ const Transcriber = () => {
                             });
                     } else {
                         console.log("not granted");
+
+                        chrome.tabs.create({
+                            url: chrome.runtime.getURL(
+                                `permissions.html?permission=${Permission.Microphone}`
+                            ),
+                        });
                     }
                 });
             } else if (audioSource === "tab") {

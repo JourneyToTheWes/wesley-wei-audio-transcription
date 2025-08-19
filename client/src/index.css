@@ -2,7 +2,7 @@
 
 @layer components {
     .btn {
-        @apply rounded-md p-2;
+        @apply rounded-md p-2 cursor-pointer disabled:cursor-default;
     }
     .btn-icon-text {
         @apply flex items-center gap-2;
