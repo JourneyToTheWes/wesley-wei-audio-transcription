@@ -14,7 +14,13 @@
     "side_panel": {
         "default_path": "sidepanel.html"
     },
+    "web_accessible_resources": [
+        {
+            "resources": ["home.html"],
+            "matches": ["<all_urls>"]
+        }
+    ],
     "permissions": ["tabCapture", "activeTab", "sidePanel", "storage"],
-    "optional_permissions": ["microphone", "background"],
+    "optional_permissions": ["background"],
     "host_permissions": ["<all_urls>"]
 }

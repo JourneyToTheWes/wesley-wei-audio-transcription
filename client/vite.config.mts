@@ -19,6 +19,7 @@ export default defineConfig({
                 index: "index.html",
                 sidepanel: "sidepanel.html",
                 background: "src/background.ts",
+                home: "home.html",
             },
             output: {
                 entryFileNames: (assetInfo) => {

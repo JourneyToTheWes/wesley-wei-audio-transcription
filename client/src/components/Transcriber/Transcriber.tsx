@@ -4,6 +4,7 @@ import Toggle from "../Toggle/Toggle";
 import { FaCopy, FaPause, FaPlay, FaStop } from "react-icons/fa";
 import { BsFiletypeTxt } from "react-icons/bs";
 import { LuFileJson2 } from "react-icons/lu";
+import { requestMicrophonePermission } from "../../utils/permissions";
 
 interface ITranscript {
     timestamp: number;
@@ -23,6 +24,7 @@ const Transcriber = () => {
     const [showToast, setShowToast] = useState(false);
     const [transcriptProcessingMode, setTranscriptProcessingMode] =
         useState("real-time");
+    const [audioSource, setAudioSource] = useState("tab");
 
     // useRef variables to store mutable objects for persistence across rerenders
     const socketRef = useRef<WebSocket | null>(null);
@@ -120,6 +122,7 @@ const Transcriber = () => {
         newSocket.onmessage = (event) => {
             try {
                 const data = JSON.parse(event.data);
+                console.log(data);
                 if (data.transcript) {
                     // Calculate the elapsed time since recording started
                     const elapsedTime = Date.now() - startTimeRef.current;
@@ -259,62 +262,130 @@ const Transcriber = () => {
 
             setIsTranscribing(true);
             setTranscription(
-                "WebSocket connected. Starting tab audio capture..."
+                `WebSocket connected. Starting ${audioSource} audio capture...`
             );
             startTimeRef.current = Date.now();
 
-            // Start capture audio from tab using the chrome.tabCapture API
-            chrome.tabCapture.capture(
-                { audio: true, video: false },
-                (stream) => {
-                    if (stream) {
-                        console.log("Tab audio stream started", stream);
+            if (audioSource === "microphone") {
+                requestMicrophonePermission().then((granted) => {
+                    console.log("granted:", granted);
+                    if (granted) {
+                        console.log("granted");
 
-                        // Store the stream in a ref for later playback and cleanup
-                        capturedStreamRef.current = stream;
-
-                        // Initialize MediaRecorder to record from the captured stream
-                        const mediaRecorder = new MediaRecorder(stream, {
-                            mimeType: "audio/webm; codecs=opus",
-                        });
-
-                        // Store the media recorder instance in the ref
-                        mediaRecorderRef.current = mediaRecorder;
-
-                        // Event handler for when a chunk of data is available
-                        mediaRecorder.ondataavailable = (event) => {
-                            if (
-                                event.data.size > 0 &&
-                                socket.readyState === WebSocket.OPEN
-                            ) {
-                                // Send the audio chunk directly over the WebSocket
-                                socket.send(event.data);
-                            }
+                        // To get stream with the correct sample rate
+                        const audioConstraints = {
+                            audio: {
+                                sampleRate: 48000,
+                                channelCount: 1,
+                                echoCancellation: true,
+                            },
                         };
 
-                        // Start recording, sending data in 0.1-second chunks if processing mode is
-                        // real-time or chunked every 30 seconds.
-                        mediaRecorder.start(
-                            transcriptProcessingMode === "real-time"
-                                ? 100
-                                : 30000
-                        );
-
-                        setTranscription("Recording and transcribing...\n");
+                        navigator.mediaDevices
+                            .getUserMedia(audioConstraints)
+                            .then((stream) => {
+                                handleStream(stream, socket);
+                            })
+                            .catch((error) => {
+                                console.error(
+                                    "Error accessing microphone:",
+                                    error
+                                );
+                                displayStatusMessage(
+                                    `Error accessing microphone: ${error}. Please ensure you have granted the necessary permissions.`
+                                );
+                                setTranscription(
+                                    "Error: Failed to capture microphone audio."
+                                );
+                                setIsTranscribing(false);
+                                if (
+                                    socketRef.current &&
+                                    socketRef.current.readyState ===
+                                        WebSocket.OPEN
+                                ) {
+                                    socketRef.current.close();
+                                }
+                            });
                     } else {
-                        console.error("Failed to capture tab audio");
-                        setTranscription("Error: Failed to capture tab audio.");
-                        setIsTranscribing(false);
-                        // Close the socket if capture fails
-                        if (socket.readyState === WebSocket.OPEN) {
-                            socket.close();
+                        console.log("not granted");
+                    }
+                });
+            } else if (audioSource === "tab") {
+                if (typeof chrome === "undefined" || !chrome.tabCapture) {
+                    displayStatusMessage(
+                        "Error accessing chrome.tabCapture in this environment. This feature requires a Chrome Extension."
+                    );
+                    setIsTranscribing(false);
+                    if (
+                        socketRef.current &&
+                        socketRef.current.readyState === WebSocket.OPEN
+                    ) {
+                        socketRef.current.close();
+                    }
+                    return;
+                }
+                // Start capture audio from tab using the chrome.tabCapture API
+                chrome.tabCapture.capture(
+                    { audio: true, video: false },
+                    (stream) => {
+                        if (stream) {
+                            handleStream(stream, socket);
+                        } else {
+                            console.error("Failed to capture tab audio");
+                            displayStatusMessage(
+                                `Error: Failed to capturing tab audio.`
+                            );
+                            setTranscription(
+                                "Error: Failed to capture tab audio."
+                            );
+                            setIsTranscribing(false);
+                            // Close the socket if capture fails
+                            if (socket.readyState === WebSocket.OPEN) {
+                                socket.close();
 
-                            displayStatusMessage("WebSocket closed.");
+                                displayStatusMessage("WebSocket closed.");
+                            }
                         }
                     }
-                }
-            );
+                );
+            }
         };
+    };
+
+    // Helper function to handle the media stream once it's acquired
+    const handleStream = (stream: MediaStream, socket: WebSocket) => {
+        console.log(`${audioSource} audio stream started`, stream);
+
+        // Store the stream in a ref for later playback and cleanup
+        if (audioSource !== "microphone") {
+            capturedStreamRef.current = stream;
+        } else {
+            capturedStreamRef.current = null;
+        }
+
+        // Initialize MediaRecorder to record from the captured stream
+        const mediaRecorder = new MediaRecorder(stream, {
+            mimeType: "audio/webm; codecs=opus",
+        });
+
+        // Store the media recorder instance in the ref
+        mediaRecorderRef.current = mediaRecorder;
+
+        // Event handler for when a chunk of data is available
+        mediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0 && socket.readyState === WebSocket.OPEN) {
+                // Send the audio chunk directly over the WebSocket
+                socket.send(event.data);
+            }
+        };
+
+        // Start recording, sending data in 0.1-second chunks if processing mode is
+        // real-time or chunked every 30 seconds.
+        mediaRecorder.start(
+            transcriptProcessingMode === "real-time" ? 100 : 30000
+        );
+
+        setTranscription("Recording and transcribing...\n");
     };
 
     const handleResumeTranscribing = () => {
@@ -502,6 +573,19 @@ const Transcriber = () => {
                     onClose={handleCloseToast}
                 />
             )}
+
+            {/* Audio Source Selection */}
+            <div className="flex flex-col justify-center items-center mb-4 space-x-2">
+                <h3 className="text-base">Audio Source:</h3>
+                <Toggle
+                    value={audioSource}
+                    leftValue="microphone"
+                    rightValue="tab"
+                    leftContent="Microphone"
+                    rightContent="Tab"
+                    onToggle={setAudioSource}
+                />
+            </div>
 
             {/* Transcript Processing Modes */}
             <div className="flex flex-col items-center">
