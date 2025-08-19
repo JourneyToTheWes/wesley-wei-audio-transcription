@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect } from "react";
 import Toast from "../Toast/Toast";
 import Toggle from "../Toggle/Toggle";
+import { FaCopy, FaPause, FaPlay, FaStop } from "react-icons/fa";
+import { BsFiletypeTxt } from "react-icons/bs";
+import { LuFileJson2 } from "react-icons/lu";
 
 interface ITranscript {
     timestamp: number;
@@ -526,34 +529,37 @@ const Transcriber = () => {
                 {!isTranscribing && !isPaused ? (
                     <button
                         onClick={handleStartTranscribing}
-                        className="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-2 rounded-md"
+                        className="bg-green-500 hover:bg-green-600 text-white font-semibold btn btn-icon-text"
                     >
+                        <FaPlay />
                         Start
                     </button>
                 ) : isPaused ? (
                     <button
                         onClick={handleResumeTranscribing}
-                        className="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-2 rounded-md"
+                        className="bg-green-500 hover:bg-green-600 text-white font-semibold btn btn-icon-text"
                     >
+                        <FaPlay />
                         Resume
                     </button>
                 ) : (
                     <button
                         onClick={handlePauseTranscribing}
-                        className="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 px-2 rounded-md"
+                        className="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold btn btn-icon-text"
                     >
-                        Pause
+                        <FaPause /> Pause
                     </button>
                 )}
                 <button
                     onClick={handleStopTranscribing}
                     disabled={!isTranscribing && !isPaused}
-                    className={`text-white font-semibold py-2 px-2 rounded-md ${
+                    className={`text-white font-semibold btn btn-icon-text ${
                         isTranscribing || isPaused
                             ? "bg-red-500 hover:bg-red-600"
                             : "bg-gray-400"
                     }`}
                 >
+                    <FaStop />
                     Stop
                 </button>
             </div>
@@ -565,39 +571,40 @@ const Transcriber = () => {
             </div>
 
             {/* Copy/Download Transcript */}
-            <div className="space-x-4 mb-4">
+            <div className="flex space-x-4 mb-4">
                 <button
                     onClick={handleCopyToClipboard}
                     disabled={transcription.length === 0}
-                    className={`px-4 py-2 rounded-md font-semibold text-white ${
+                    className={`px-4 btn btn-icon-text font-semibold text-white ${
                         transcription.length === 0
                             ? "bg-gray-400"
                             : "bg-indigo-600 hover:bg-indigo-700"
                     }`}
                 >
+                    <FaCopy />
                     Copy to Clipboard
                 </button>
                 <button
                     onClick={handleDownloadTranscriptText}
                     disabled={transcription.length === 0}
-                    className={`px-4 py-2 rounded-md font-semibold text-white ${
+                    className={`px-4 btn btn-icon-text font-semibold text-white ${
                         transcription.length === 0
                             ? "bg-gray-400"
                             : "bg-purple-600 hover:bg-purple-700"
                     }`}
                 >
-                    Download Text
+                    <BsFiletypeTxt /> Download Text
                 </button>
                 <button
                     onClick={handleDownloadTranscriptJson}
                     disabled={transcription.length === 0}
-                    className={`px-4 py-2 rounded-md font-semibold text-white ${
+                    className={`px-4 btn btn-icon-text font-semibold text-white ${
                         transcription.length === 0
                             ? "bg-gray-400"
                             : "bg-purple-600 hover:bg-purple-700"
                     }`}
                 >
-                    Download JSON
+                    <LuFileJson2 /> Download JSON
                 </button>
             </div>
         </div>
