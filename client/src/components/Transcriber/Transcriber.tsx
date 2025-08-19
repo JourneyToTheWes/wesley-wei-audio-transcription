@@ -31,6 +31,8 @@ const Transcriber = () => {
     const finalTranscriptionEventsRef = useRef<ITranscript[]>([]);
     const lastInterimTranscriptionRef = useRef<ITranscript | null>(null);
     const userMessagesRef = useRef<ITranscript[]>([]);
+    // New ref to track the last finalized transcript text for de-duplication
+    const lastFinalizedTextRef = useRef("");
 
     const displayStatusMessage = (message: string) => {
         setStatusMessage(message);
@@ -115,22 +117,55 @@ const Transcriber = () => {
                 if (data.transcript) {
                     // Calculate the elapsed time since recording started
                     const elapsedTime = Date.now() - startTimeRef.current;
-                    const timestamp = elapsedTime;
 
-                    // Check if it's a final transcript
-                    if (data.isFinal) {
-                        // If it's a final result, append it to the final text and clear the interim buffer
-                        finalTranscriptionEventsRef.current.push({
-                            timestamp,
-                            text: data.transcript,
-                        });
-                        lastInterimTranscriptionRef.current = null;
+                    let transcriptText = data.transcript;
+
+                    // Check if the current API transcript starts with the
+                    // last transcripted segment. If so, we want to remove
+                    // the duplicate section so the segment looks like it is
+                    // resuming from the previous pause point. Google's
+                    // speech-to-text feeds in the whole transcript segment
+                    // each time until it reaches a final flag which it determines
+                    // as a pause in speech, so we need this logic for smooth client UX.
+                    if (
+                        lastFinalizedTextRef.current &&
+                        transcriptText.startsWith(lastFinalizedTextRef.current)
+                    ) {
+                        transcriptText = transcriptText
+                            .substring(lastFinalizedTextRef.current.length)
+                            .trim();
+                    }
+
+                    if (data.isFinal || !lastInterimTranscriptionRef.current) {
+                        const timestamp = elapsedTime;
+
+                        // Check if it's a final transcript
+                        if (data.isFinal) {
+                            // Clear up the last finalized text ref
+                            lastFinalizedTextRef.current = "";
+
+                            // If it's a final result, append it to the final text and clear the interim
+                            const timestampToUse =
+                                lastInterimTranscriptionRef.current
+                                    ? lastInterimTranscriptionRef.current
+                                          .timestamp
+                                    : elapsedTime;
+                            finalTranscriptionEventsRef.current.push({
+                                timestamp: timestampToUse, // Use last interim timestamp to maintain original timestamp for when the transcription segment started
+                                text: transcriptText,
+                            });
+                            lastInterimTranscriptionRef.current = null;
+                        } else {
+                            // If it's an interim result, store it in the interim buffer
+                            lastInterimTranscriptionRef.current = {
+                                timestamp,
+                                text: transcriptText,
+                            };
+                        }
                     } else {
-                        // If it's an interim result, store it in the interim buffer
-                        lastInterimTranscriptionRef.current = {
-                            timestamp,
-                            text: data.transcript,
-                        };
+                        // It's a continuation of current interim segment, so only update the text so the original timestamp remains
+                        lastInterimTranscriptionRef.current.text =
+                            transcriptText;
                     }
 
                     // Update the main transcription state by combining all parts
@@ -278,7 +313,7 @@ const Transcriber = () => {
             setIsPaused(false);
 
             userMessagesRef.current.push({
-                timestamp: Date.now() - startTimeRef.current,
+                timestamp: sessionDuration + 1, // to offset resume being later than pause
                 text: "[Resumed transcribing...]",
             });
             setTranscription(combineAndRenderTranscripts());
@@ -290,6 +325,20 @@ const Transcriber = () => {
             mediaRecorderRef.current &&
             mediaRecorderRef.current.state === "recording"
         ) {
+            // Clear Interim messages so order on transcript visually appears chronologically
+            if (lastInterimTranscriptionRef.current) {
+                // Set last finalized text segment on pause so we can check for duplication
+                // on resume.
+                lastFinalizedTextRef.current =
+                    lastInterimTranscriptionRef.current.text;
+
+                finalTranscriptionEventsRef.current.push({
+                    timestamp: lastInterimTranscriptionRef.current.timestamp,
+                    text: lastInterimTranscriptionRef.current.text,
+                });
+                lastInterimTranscriptionRef.current = null; // Clear interim message
+            }
+
             mediaRecorderRef.current.pause();
             if (audioRef.current) {
                 audioRef.current.pause();
@@ -297,9 +346,10 @@ const Transcriber = () => {
             setIsTranscribing(false);
             setIsPaused(true);
             userMessagesRef.current.push({
-                timestamp: Date.now() - startTimeRef.current,
+                timestamp: sessionDuration,
                 text: "[Paused transcribing...]",
             });
+
             setTranscription(combineAndRenderTranscripts());
         }
     };
