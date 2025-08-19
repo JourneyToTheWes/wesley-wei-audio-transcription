@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import Toast from "../Toast/Toast";
+import Toggle from "../Toggle/Toggle";
 
 interface ITranscript {
     timestamp: number;
@@ -17,6 +18,8 @@ const Transcriber = () => {
     const [sessionDuration, setSessionDuration] = useState<number>(0);
     const [statusMessage, setStatusMessage] = useState("");
     const [showToast, setShowToast] = useState(false);
+    const [transcriptProcessingMode, setTranscriptProcessingMode] =
+        useState("real-time");
 
     // useRef variables to store mutable objects for persistence across rerenders
     const socketRef = useRef<WebSocket | null>(null);
@@ -227,7 +230,13 @@ const Transcriber = () => {
     };
 
     const handleStartTranscribing = () => {
+        // Reset previous transcription variable holders
+        lastInterimTranscriptionRef.current = null;
+        finalTranscriptionEventsRef.current = [];
+        lastFinalizedTextRef.current = "";
+        userMessagesRef.current = [];
         setSessionDuration(0); // Set session duration back to 0 when starting new session
+
         setTranscription(
             "Connecting to WebSocket and starting transcription..."
         );
@@ -280,8 +289,13 @@ const Transcriber = () => {
                             }
                         };
 
-                        // Start recording, sending data in 0.1-second chunks
-                        mediaRecorder.start(100);
+                        // Start recording, sending data in 0.1-second chunks if processing mode is
+                        // real-time or chunked every 30 seconds.
+                        mediaRecorder.start(
+                            transcriptProcessingMode === "real-time"
+                                ? 100
+                                : 30000
+                        );
 
                         setTranscription("Recording and transcribing...\n");
                     } else {
@@ -368,6 +382,7 @@ const Transcriber = () => {
         ) {
             socketRef.current.close();
             console.log("WebSocket closed.");
+            displayStatusMessage("WebSocket closed.");
         }
         if (capturedStreamRef.current) {
             capturedStreamRef.current
@@ -484,6 +499,19 @@ const Transcriber = () => {
                     onClose={handleCloseToast}
                 />
             )}
+
+            {/* Transcript Processing Modes */}
+            <div className="flex flex-col items-center">
+                <h3 className="text-base">Transcript Processing Mode</h3>
+                <Toggle
+                    value={transcriptProcessingMode}
+                    leftValue="real-time"
+                    rightValue="chunks"
+                    leftContent="Real-Time"
+                    rightContent="Chunks"
+                    onToggle={setTranscriptProcessingMode}
+                />
+            </div>
 
             {/* Transcription Text */}
             <div className="w-full mt-8">

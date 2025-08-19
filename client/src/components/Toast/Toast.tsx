@@ -20,7 +20,7 @@ const Toast: React.FC<IToast> = ({ message, duration = 3000, onClose }) => {
 
     return (
         <div
-            className={`w-9/10 p-3 bg-gray-600 mb-4 fixed transition-all duration-500 ${
+            className={`z-10 w-9/10 p-3 bg-gray-600 mb-4 fixed transition-all duration-500 ${
                 isVisible
                     ? "opacity-90 translate-y-0"
                     : "opacity-0 -translate-y-full"
