@@ -1,5 +1,5 @@
 import express from "express";
-import Websocket, { WebSocketServer } from "ws";
+import { WebSocketServer } from "ws";
 import { SpeechClient, protos } from "@google-cloud/speech";
 import dotenv from "dotenv";
 

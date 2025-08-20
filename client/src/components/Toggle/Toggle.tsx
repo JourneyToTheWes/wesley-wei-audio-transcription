@@ -6,7 +6,7 @@ interface IToggle {
     rightValue: string;
     leftContent: string | React.ReactNode;
     rightContent: string | React.ReactNode;
-    onToggle: (value: string) => any;
+    onToggle: (value: string) => unknown;
 }
 
 /**

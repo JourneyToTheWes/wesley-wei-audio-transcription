@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 
 interface IMicrophoneSelector {
-    onMicrophoneChange: (microphoneDeviceId: string) => any;
+    onMicrophoneChange: (microphoneDeviceId: string) => unknown;
 }
 
 const MicrophoneSelector: React.FC<IMicrophoneSelector> = ({

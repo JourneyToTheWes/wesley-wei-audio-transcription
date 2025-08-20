@@ -1,0 +1,23 @@
+{
+    "name": "audio-transcription-extension",
+    "version": "1.0.0",
+    "description": "Transcribes real-time audio via Google Chrome Extension.",
+    "scripts": {
+        "lint": "eslint . --ext .ts,.tsx",
+        "lint:fix": "eslint . --ext .ts,.tsx --fix"
+    },
+    "author": "Wesley Wei",
+    "license": "GPL-3.0-or-later",
+    "devDependencies": {
+        "@typescript-eslint/eslint-plugin": "^8.40.0",
+        "@typescript-eslint/parser": "^8.40.0",
+        "eslint": "^9.33.0",
+        "eslint-plugin-import": "^2.32.0",
+        "eslint-plugin-jsx-a11y": "^6.10.2",
+        "eslint-plugin-n": "^17.21.3",
+        "eslint-plugin-node": "^11.1.0",
+        "eslint-plugin-react": "^7.37.5",
+        "eslint-plugin-react-hooks": "^5.2.0"
+    },
+    "type": "module"
+}

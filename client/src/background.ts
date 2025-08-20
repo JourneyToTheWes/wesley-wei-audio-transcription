@@ -6,8 +6,3 @@ chrome.runtime.onInstalled.addListener(() => {
         active: true,
     });
 });
-
-chrome.action.onClicked.addListener((tab) => {
-    // Do something when the extension icon is clicked
-    console.log("The extension has been clicked.");
-});
