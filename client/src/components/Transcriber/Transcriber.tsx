@@ -47,6 +47,17 @@ const Transcriber = () => {
     // New ref to track the last finalized transcript text for de-duplication
     const lastFinalizedTextRef = useRef("");
 
+    // useRef to scroll to bottom of transcriptions container
+    const transcriptContainerRef = useRef<HTMLDivElement | null>(null);
+
+    // To scroll to bottom of transcriptions container when transcribing
+    useEffect(() => {
+        if (transcriptContainerRef.current) {
+            transcriptContainerRef.current.scrollTop =
+                transcriptContainerRef.current.scrollHeight;
+        }
+    }, [transcription]);
+
     const displayStatusMessage = (message: string) => {
         setStatusMessage(message);
         setShowToast(true);
@@ -342,9 +353,13 @@ const Transcriber = () => {
                     }
                     return;
                 }
+
                 // Start capture audio from tab using the chrome.tabCapture API
                 chrome.tabCapture.capture(
-                    { audio: true, video: false },
+                    {
+                        audio: true,
+                        video: false,
+                    },
                     (stream) => {
                         if (stream) {
                             handleStream(stream, socket);
@@ -629,7 +644,10 @@ const Transcriber = () => {
             <div className="w-full md:w-8/10 mt-8 flex flex-col gap-2">
                 {/* Transcription Text */}
                 <h2 className="text-base self-start">Transcription:</h2>
-                <div className="w-full min-h-[50px] max-h-[300px] overflow-auto bg-neutral-500 flex justify-center rounded-md shadow-md p-3">
+                <div
+                    ref={transcriptContainerRef}
+                    className="w-full min-h-[50px] max-h-[300px] overflow-auto bg-neutral-500 flex justify-center rounded-md shadow-md p-3"
+                >
                     <p>{renderTranscriptionWithBreaks(transcription)}</p>
                 </div>
 
