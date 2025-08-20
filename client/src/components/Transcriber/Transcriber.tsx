@@ -6,6 +6,7 @@ import { BsFiletypeTxt } from "react-icons/bs";
 import { LuFileJson2 } from "react-icons/lu";
 import { requestMicrophonePermission } from "../../utils/permissions";
 import { Permission } from "../../permissions/Permissions";
+import MicrophoneSelector from "../MicrophoneSelector/MicrophoneSelector";
 
 interface ITranscript {
     timestamp: number;
@@ -26,6 +27,9 @@ const Transcriber = () => {
     const [transcriptProcessingMode, setTranscriptProcessingMode] =
         useState("real-time");
     const [audioSource, setAudioSource] = useState("tab");
+    // "default" is the microphone value set the first time when selecting the microphone via
+    // Chrome Extension Microphone permission request.
+    const [microphoneSelection, setMicrophoneSelection] = useState("default");
 
     // useRef variables to store mutable objects for persistence across rerenders
     const socketRef = useRef<WebSocket | null>(null);
@@ -273,12 +277,19 @@ const Transcriber = () => {
                     if (granted) {
                         console.log("granted");
 
+                        // The selected microphone
+                        const deviceId: object | undefined =
+                            microphoneSelection === "default"
+                                ? undefined
+                                : { exact: microphoneSelection };
+
                         // To get stream with the correct sample rate
                         const audioConstraints = {
                             audio: {
                                 sampleRate: 48000,
                                 channelCount: 1,
                                 echoCancellation: true,
+                                deviceId,
                             },
                         };
 
@@ -581,122 +592,129 @@ const Transcriber = () => {
                 />
             )}
 
-            {/* Audio Source Selection */}
-            <div className="flex flex-col justify-center items-center mb-4 space-x-2">
-                <h3 className="text-base">Audio Source:</h3>
-                <Toggle
-                    value={audioSource}
-                    leftValue="microphone"
-                    rightValue="tab"
-                    leftContent="Microphone"
-                    rightContent="Tab"
-                    onToggle={setAudioSource}
-                />
-            </div>
+            <div className="w-full flex flex-col md:flex-row md:justify-center">
+                {/* Audio Source Selection */}
+                <div className="flex flex-col justify-center items-center mb-4 space-x-2">
+                    <h3 className="text-base">Audio Source:</h3>
+                    <Toggle
+                        value={audioSource}
+                        leftValue="microphone"
+                        rightValue="tab"
+                        leftContent="Microphone"
+                        rightContent="Tab"
+                        onToggle={setAudioSource}
+                    />
 
-            {/* Transcript Processing Modes */}
-            <div className="flex flex-col items-center">
-                <h3 className="text-base">Transcript Processing Mode</h3>
-                <Toggle
-                    value={transcriptProcessingMode}
-                    leftValue="real-time"
-                    rightValue="chunks"
-                    leftContent="Real-Time"
-                    rightContent="Chunks"
-                    onToggle={setTranscriptProcessingMode}
-                />
-            </div>
+                    {audioSource === "microphone" && (
+                        <MicrophoneSelector
+                            onMicrophoneChange={setMicrophoneSelection}
+                        />
+                    )}
+                </div>
 
-            {/* Transcription Text */}
-            <div className="w-full mt-8">
-                <h2 className="text-base self-start">Transcription:</h2>
-                <div className="w-full min-h-[50px] bg-neutral-500 flex justify-center rounded-md shadow-md p-3">
-                    <p>{renderTranscriptionWithBreaks(transcription)}</p>
+                {/* Transcript Processing Modes */}
+                <div className="flex flex-col items-center">
+                    <h3 className="text-base">Transcript Processing Mode</h3>
+                    <Toggle
+                        value={transcriptProcessingMode}
+                        leftValue="real-time"
+                        rightValue="chunks"
+                        leftContent="Real-Time"
+                        rightContent="Chunks"
+                        onToggle={setTranscriptProcessingMode}
+                    />
                 </div>
             </div>
 
-            {/* Transcription Button Group */}
-            <div className="w-full flex justify-between">
-                {!isTranscribing && !isPaused ? (
-                    <button
-                        onClick={handleStartTranscribing}
-                        className="bg-green-500 hover:bg-green-600 text-white font-semibold btn btn-icon-text"
-                    >
-                        <FaPlay />
-                        Start
-                    </button>
-                ) : isPaused ? (
-                    <button
-                        onClick={handleResumeTranscribing}
-                        className="bg-green-500 hover:bg-green-600 text-white font-semibold btn btn-icon-text"
-                    >
-                        <FaPlay />
-                        Resume
-                    </button>
-                ) : (
-                    <button
-                        onClick={handlePauseTranscribing}
-                        className="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold btn btn-icon-text"
-                    >
-                        <FaPause /> Pause
-                    </button>
-                )}
-                <button
-                    onClick={handleStopTranscribing}
-                    disabled={!isTranscribing && !isPaused}
-                    className={`text-white font-semibold btn btn-icon-text ${
-                        isTranscribing || isPaused
-                            ? "bg-red-500 hover:bg-red-600"
-                            : "bg-gray-400"
-                    }`}
-                >
-                    <FaStop />
-                    Stop
-                </button>
-            </div>
+            <div className="w-full md:w-8/10 mt-8 flex flex-col gap-2">
+                {/* Transcription Text */}
+                <h2 className="text-base self-start">Transcription:</h2>
+                <div className="w-full min-h-[50px] max-h-[300px] overflow-auto bg-neutral-500 flex justify-center rounded-md shadow-md p-3">
+                    <p>{renderTranscriptionWithBreaks(transcription)}</p>
+                </div>
 
-            {/* Session Duration */}
-            <div className="flex flex-col items-center">
-                <h3 className="text-base">Session Duration</h3>
-                {formatTime(sessionDuration)}
-            </div>
+                {/* Transcription Button Group */}
+                <div className="w-full flex justify-between">
+                    {!isTranscribing && !isPaused ? (
+                        <button
+                            onClick={handleStartTranscribing}
+                            className="bg-green-500 hover:bg-green-600 text-white font-semibold btn btn-icon-text"
+                        >
+                            <FaPlay />
+                            Start
+                        </button>
+                    ) : isPaused ? (
+                        <button
+                            onClick={handleResumeTranscribing}
+                            className="bg-green-500 hover:bg-green-600 text-white font-semibold btn btn-icon-text"
+                        >
+                            <FaPlay />
+                            Resume
+                        </button>
+                    ) : (
+                        <button
+                            onClick={handlePauseTranscribing}
+                            className="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold btn btn-icon-text"
+                        >
+                            <FaPause /> Pause
+                        </button>
+                    )}
+                    <button
+                        onClick={handleStopTranscribing}
+                        disabled={!isTranscribing && !isPaused}
+                        className={`text-white font-semibold btn btn-icon-text ${
+                            isTranscribing || isPaused
+                                ? "bg-red-500 hover:bg-red-600"
+                                : "bg-gray-400"
+                        }`}
+                    >
+                        <FaStop />
+                        Stop
+                    </button>
+                </div>
+                {/* Session Duration */}
+                <div className="flex flex-col items-center">
+                    <h3 className="text-base">Session Duration</h3>
+                    {formatTime(sessionDuration)}
+                </div>
 
-            {/* Copy/Download Transcript */}
-            <div className="flex space-x-4 mb-4">
-                <button
-                    onClick={handleCopyToClipboard}
-                    disabled={transcription.length === 0}
-                    className={`px-4 btn btn-icon-text font-semibold text-white ${
-                        transcription.length === 0
-                            ? "bg-gray-400"
-                            : "bg-indigo-600 hover:bg-indigo-700"
-                    }`}
-                >
-                    <FaCopy />
-                    Copy to Clipboard
-                </button>
-                <button
-                    onClick={handleDownloadTranscriptText}
-                    disabled={transcription.length === 0}
-                    className={`px-4 btn btn-icon-text font-semibold text-white ${
-                        transcription.length === 0
-                            ? "bg-gray-400"
-                            : "bg-purple-600 hover:bg-purple-700"
-                    }`}
-                >
-                    <BsFiletypeTxt /> Download Text
-                </button>
-                <button
-                    onClick={handleDownloadTranscriptJson}
-                    disabled={transcription.length === 0}
-                    className={`px-4 btn btn-icon-text font-semibold text-white ${
-                        transcription.length === 0
-                            ? "bg-gray-400"
-                            : "bg-purple-600 hover:bg-purple-700"
-                    }`}
-                >
-                    <LuFileJson2 /> Download JSON
-                </button>
+                {/* Copy/Download Transcript */}
+                <div className="flex flex-wrap justify-center gap-2 mb-4">
+                    <button
+                        onClick={handleCopyToClipboard}
+                        disabled={transcription.length === 0}
+                        className={`px-4 btn btn-icon-text font-semibold text-white ${
+                            transcription.length === 0
+                                ? "bg-gray-400"
+                                : "bg-indigo-600 hover:bg-indigo-700"
+                        }`}
+                    >
+                        <FaCopy />
+                        Copy to Clipboard
+                    </button>
+                    <button
+                        onClick={handleDownloadTranscriptText}
+                        disabled={transcription.length === 0}
+                        className={`px-4 btn btn-icon-text font-semibold text-white ${
+                            transcription.length === 0
+                                ? "bg-gray-400"
+                                : "bg-purple-600 hover:bg-purple-700"
+                        }`}
+                    >
+                        <BsFiletypeTxt /> Download Text
+                    </button>
+                    <button
+                        onClick={handleDownloadTranscriptJson}
+                        disabled={transcription.length === 0}
+                        className={`px-4 btn btn-icon-text font-semibold text-white ${
+                            transcription.length === 0
+                                ? "bg-gray-400"
+                                : "bg-purple-600 hover:bg-purple-700"
+                        }`}
+                    >
+                        <LuFileJson2 /> Download JSON
+                    </button>
+                </div>
             </div>
         </div>
     );

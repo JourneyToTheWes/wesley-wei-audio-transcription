@@ -4,7 +4,7 @@ import Header from "../components/Header/Header";
 
 const SidePanel: React.FC = () => {
     return (
-        <div className="h-screen bg-neutral-800 text-white rounded-lg p-4 shadow-lg flex flex-col items-center gap-5">
+        <div className="min-h-screen bg-neutral-800 text-white rounded-lg p-4 shadow-lg flex flex-col items-center gap-5">
             <Header />
             <Transcriber />
         </div>
