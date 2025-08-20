@@ -1,3 +1,39 @@
+# Real-Time Audio Transcription Chrome Extension
+
+> Developed by: Wesley Wei
+
+## About
+
+This is a Chrome Extension designed to capture audio and provide real-time transcription. It has two different audio processing modes: tab and microphone. There are also two different transcript processing modes: real-time and chunks. After transcribing the audio, the user can then either copy the transcript to their clipboard or download TXT/JSON files.
+
+The audio transcription is provided by Google's Speech-to-Text API, so an API key is required in order to make this Chrome Extension to work properly.
+
+### Example Use Cases
+
+-   Opening up a YouTube/Netflix/SoundCloud tab and recording transcriptions.
+-   Opening up a random Google Chrome tab a, selecting microphone as an audio source, and record a video meeting conversation (where the microphone picks up your speech and the other speaker's speech from the speakers).
+    > _Both cases they could copy or download (TXT/JSON) the transcript_
+
+## Setup
+
+#### Development
+
+-   Local Development
+    1. Download Google Cloud Speech-to-Text API key.
+    2. Create `.env` file within `server/` root and add key-value pair (`GOOGLE_CLOUD_SERVICE_KEY=<GOOGLE_CLOUD_SERVICE_KEY_URL_PATH>`).
+    3. Install dependencies.
+        - `cd client && npm install`
+        - `cd server && npm install`
+    4. Startup live development.
+        - In one terminal:
+            1. `cd client`
+            2. `npm run dev:live`
+        - In second terminal:
+            1. `cd server`
+            2. `npm run dev`
+    5. Load unpacked `client/dist/` bundle via `chrome://extensions/` in Google Chrome with `developer mode` enabled.
+    6. Now you can interact with the Chrome Extension by opening the Popup or SidePanel or `chrome-extension://<chrome-extension-id>/home.html`.
+
 ## License
 
 This project is licensed under the GNU General Public License v3.0 (GPL).
