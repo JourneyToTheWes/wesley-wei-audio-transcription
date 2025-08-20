@@ -4,7 +4,8 @@
     "description": "Transcribes real-time audio via Google Chrome Extension.",
     "scripts": {
         "lint": "eslint . --ext .ts,.tsx",
-        "lint:fix": "eslint . --ext .ts,.tsx --fix"
+        "lint:fix": "eslint . --ext .ts,.tsx --fix",
+        "prepare": "husky"
     },
     "author": "Wesley Wei",
     "license": "GPL-3.0-or-later",
@@ -17,7 +18,17 @@
         "eslint-plugin-n": "^17.21.3",
         "eslint-plugin-node": "^11.1.0",
         "eslint-plugin-react": "^7.37.5",
-        "eslint-plugin-react-hooks": "^5.2.0"
+        "eslint-plugin-react-hooks": "^5.2.0",
+        "husky": "^9.1.7",
+        "lint-staged": "^16.1.5"
     },
-    "type": "module"
+    "type": "module",
+    "lint-staged": {
+        "client/**/*.{ts,tsx}": [
+            "eslint --fix"
+        ],
+        "server/**/*.ts": [
+            "eslint --fix"
+        ]
+    }
 }
