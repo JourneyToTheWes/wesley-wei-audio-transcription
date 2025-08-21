@@ -14,6 +14,10 @@ The audio transcription is provided by Google's Speech-to-Text API, so an API ke
 -   Opening up a random Google Chrome tab a, selecting microphone as an audio source, and record a video meeting conversation (where the microphone picks up your speech and the other speaker's speech from the speakers).
     > _Both cases they could copy or download (TXT/JSON) the transcript_
 
+## Demo
+
+🎥[Watch the demo on Google Drive](https://drive.google.com/file/d/1Qq7iBDKAIlUiGs1FKgin6YG8V0D8GG8w/view?usp=sharing)
+
 ## Setup
 
 #### Development
