@@ -75,6 +75,16 @@ wss.on("connection", (ws) => {
     });
 });
 
+// Server health monitoring endpoint
+app.get("/health", (req, res) => {
+    const status = {
+        uptime: process.uptime(),
+        timestamp: new Date().toISOString(),
+        status: "ok",
+    };
+    res.status(200).json(status);
+});
+
 // Use the Express server to handle the WebSocket upgrade request.
 const server = app.listen(port, () => {
     console.log(`Backend listening on port ${port}`);

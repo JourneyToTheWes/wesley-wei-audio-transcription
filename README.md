@@ -20,23 +20,35 @@ The audio transcription is provided by Google's Speech-to-Text API, so an API ke
 
 ## Setup
 
-#### Development
+#### Local Development
 
--   Local Development
-    1. Download Google Cloud Speech-to-Text API key.
-    2. Create `.env` file within `server/` root and add key-value pair (`GOOGLE_CLOUD_SERVICE_KEY=<GOOGLE_CLOUD_SERVICE_KEY_URL_PATH>`).
-    3. Install dependencies.
-        - `cd client && npm install`
-        - `cd server && npm install`
-    4. Startup live development.
-        - In one terminal:
-            1. `cd client`
-            2. `npm run dev:live`
-        - In second terminal:
-            1. `cd server`
-            2. `npm run dev`
-    5. Load unpacked `client/dist/` bundle via `chrome://extensions/` in Google Chrome with `developer mode` enabled.
-    6. Now you can interact with the Chrome Extension by opening the Popup or SidePanel or `chrome-extension://<chrome-extension-id>/home.html`.
+1. Download Google Cloud Speech-to-Text API key.
+2. Create `.env` file within `client/` root and add key-value pair (`VITE_API_URL=<ws(s)://<localhost:5000/deployed-Render-url>>`).
+3. Create `.env` file within `server/` root and add key-value pair (`GOOGLE_CLOUD_SERVICE_KEY=<GOOGLE_CLOUD_SERVICE_KEY_URL_PATH>`).
+4. Install dependencies.
+    - `cd client && npm install`
+    - `cd server && npm install`
+5. Startup live development.
+    - In one terminal:
+        1. `cd client`
+        2. `npm run dev:live`
+    - In second terminal:
+        1. `cd server`
+        2. `npm run dev`
+6. Load unpacked `client/dist/` bundle via `chrome://extensions/` in Google Chrome with `developer mode` enabled.
+7. Now you can interact with the Chrome Extension by opening the Popup or SidePanel or `chrome-extension://<chrome-extension-id>/home.html`.
+
+#### Deployment
+
+-   Hosting using `Render`
+    1.  Setup account and Web Service connected to GitHub Repository.
+    2.  Connect to the branch you want deployed.
+    3.  Setup environment variables:
+        1.  Setup Secret File with file name and pasted in Speech-to-Text Google API key.
+        2.  `GOOGLE_CLOUR_SERVICE_KEY=<location-to-secret-file>`
+    4.  Stage, commit, and push changes. Render will automatically build when changes are reflected remotely on GitHub. You can also manually deploy via the Render CLI.
+    5.  Once deployed, the Render URL will be provided. Use this for your environment variable.
+    6.  Make sure your `client/` has `.env` with `VITE_API_URL=wss://<deployed-Render-url>` if you want to connect to the deployed server. Otherwise, swap out the deployed Render URL to work locally `ws://localhost:5000`.
 
 ## License
 
