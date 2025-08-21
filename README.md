@@ -50,6 +50,13 @@ The audio transcription is provided by Google's Speech-to-Text API, so an API ke
     5.  Once deployed, the Render URL will be provided. Use this for your environment variable.
     6.  Make sure your `client/` has `.env` with `VITE_API_URL=wss://<deployed-Render-url>` if you want to connect to the deployed server. Otherwise, swap out the deployed Render URL to work locally `ws://localhost:5000`.
 
+## Server Monitoring
+
+-   Health Endpoint
+    -   `GET`
+        -   Local: `http://localhost:5000/health`
+        -   Deployed server: `https://<your-deployed-render-url>/health` i.e. `https://wesley-wei-audio-transcription.onrender.com/health`
+
 ## License
 
 This project is licensed under the GNU General Public License v3.0 (GPL).
