@@ -6,7 +6,7 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const app = express();
-const port = 5000;
+const port = process.env.PORT || 5000;
 
 // Initialize the Google Cloud Speech-to-Text client.
 // Make sure the GOOGLE_CLOUD_SERVICE_KEY environment variable is set.
