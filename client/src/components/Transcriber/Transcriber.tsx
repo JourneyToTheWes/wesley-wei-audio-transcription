@@ -129,7 +129,9 @@ const Transcriber = () => {
     // Creates and returns new WebSocket to the transcribe service
     const connectWebSocket = () => {
         // Initialize a new WebSocket connection to your server
-        const newSocket = new WebSocket("ws://localhost:5000/transcribe");
+        const newSocket = new WebSocket(
+            `${import.meta.env.VITE_API_URL}/transcribe`
+        );
 
         // Store the socket instance in the ref
         socketRef.current = newSocket;

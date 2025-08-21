@@ -10,8 +10,15 @@ const port = 5000;
 
 // Initialize the Google Cloud Speech-to-Text client.
 // Make sure the GOOGLE_CLOUD_SERVICE_KEY environment variable is set.
+if (!process.env.GOOGLE_CLOUD_SERVICE_KEY) {
+    throw new Error("Missing GOOGLE_CLOUD_SERVICE_KEY environment variable");
+}
+
 const speechClient = new SpeechClient({
-    keyFilename: process.env.GOOGLE_CLOUD_SERVICE_KEY,
+    keyFilename:
+        process.env.NODE_ENV === "production"
+            ? JSON.parse(process.env.GOOGLE_CLOUD_SERVICE_KEY)
+            : process.env.GOOGLE_CLOUD_SERVICE_KEY,
 });
 
 // Create a WebSocket server instance.

@@ -1,6 +1,7 @@
 # Build output
 client/dist/
 client/build/
+server/dist/
 
 # Node modules
 node_modules/
