@@ -15,10 +15,7 @@ if (!process.env.GOOGLE_CLOUD_SERVICE_KEY) {
 }
 
 const speechClient = new SpeechClient({
-    keyFilename:
-        process.env.NODE_ENV === "production"
-            ? JSON.parse(process.env.GOOGLE_CLOUD_SERVICE_KEY)
-            : process.env.GOOGLE_CLOUD_SERVICE_KEY,
+    keyFilename: process.env.GOOGLE_CLOUD_SERVICE_KEY,
 });
 
 // Create a WebSocket server instance.
